@@ -485,7 +485,9 @@
   },
   "libraries": {
     "pinned_footprint_libs": [],
-    "pinned_symbol_libs": []
+    "pinned_symbol_libs": [
+      "New_Library"
+    ]
   },
   "meta": {
     "filename": "Radio_Schematic.kicad_pro",
@@ -661,7 +663,7 @@
         "uuid": "45b700f0-d372-44fb-92b6-26c156c2429c"
       }
     ],
-    "used_designators": "#PWR1-2,AE1,A1,U1",
+    "used_designators": "#PWR1-2,AE1,A1,U1,SW1-5",
     "variants": []
   },
   "sheets": [
