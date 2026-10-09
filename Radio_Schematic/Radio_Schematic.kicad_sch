@@ -1309,6 +1309,62 @@
 			(embedded_fonts no)
 		)
 	)
+	(junction
+		(at 132.08 113.03)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f79d0188-c8dc-4c17-b99f-0056288b88a0")
+	)
+	(wire
+		(pts
+			(xy 121.92 113.03) (xy 121.92 72.39)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "06b19b2f-9a29-4e82-b851-a4b0cba4e09b")
+	)
+	(wire
+		(pts
+			(xy 167.64 92.71) (xy 170.18 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "11a3aa21-7bc9-4e1a-8595-0e7c0394969b")
+	)
+	(wire
+		(pts
+			(xy 80.01 152.4) (xy 69.85 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "196de562-fd8d-4c32-b439-1a5f4b70dfad")
+	)
+	(wire
+		(pts
+			(xy 82.55 177.8) (xy 69.85 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1d9318d1-40d8-440e-9494-58689d9bb74e")
+	)
+	(wire
+		(pts
+			(xy 107.95 95.25) (xy 116.84 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "501e36bc-a66e-4a05-abda-fb5fa4e18fe5")
+	)
 	(wire
 		(pts
 			(xy 97.79 54.61) (xy 97.79 59.69)
@@ -1331,6 +1387,16 @@
 	)
 	(wire
 		(pts
+			(xy 170.18 92.71) (xy 170.18 113.03)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "729ca909-88a0-44f0-9e30-8cfe12e199d9")
+	)
+	(wire
+		(pts
 			(xy 130.81 90.17) (xy 130.81 95.25)
 		)
 		(stroke
@@ -1341,6 +1407,46 @@
 	)
 	(wire
 		(pts
+			(xy 107.95 72.39) (xy 121.92 72.39)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7905f609-e650-477c-b1e0-19f70a2658e2")
+	)
+	(wire
+		(pts
+			(xy 116.84 82.55) (xy 149.86 82.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "79e3e664-c051-4469-b51c-8a9efc1ee9c5")
+	)
+	(wire
+		(pts
+			(xy 82.55 100.33) (xy 81.28 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7b5115d3-508c-4253-8a99-3fe0c7959130")
+	)
+	(wire
+		(pts
+			(xy 149.86 85.09) (xy 119.38 85.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8be781b9-038d-4ec9-952e-fef875bc7d60")
+	)
+	(wire
+		(pts
 			(xy 172.72 82.55) (xy 167.64 82.55)
 		)
 		(stroke
@@ -1348,6 +1454,26 @@
 			(type default)
 		)
 		(uuid "8c547de8-77d5-4006-aac3-efac55351951")
+	)
+	(wire
+		(pts
+			(xy 81.28 165.1) (xy 69.85 165.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "90771b46-578a-43a3-aa8b-18c605da4275")
+	)
+	(wire
+		(pts
+			(xy 119.38 97.79) (xy 107.95 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9628490b-12a7-4a05-86e9-8ce6c78ac6d3")
 	)
 	(wire
 		(pts
@@ -1371,6 +1497,56 @@
 	)
 	(wire
 		(pts
+			(xy 82.55 102.87) (xy 82.55 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a985ecba-224d-4126-92df-8089d7200e93")
+	)
+	(wire
+		(pts
+			(xy 82.55 97.79) (xy 80.01 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "addc9283-5aef-412e-8729-97d6fe7bc494")
+	)
+	(wire
+		(pts
+			(xy 116.84 95.25) (xy 116.84 82.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "af754c86-1b83-4b95-bced-403605212f1a")
+	)
+	(wire
+		(pts
+			(xy 167.64 90.17) (xy 180.34 90.17)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b596d3c9-5c9f-4235-84eb-ccf079b8cd70")
+	)
+	(wire
+		(pts
+			(xy 170.18 113.03) (xy 132.08 113.03)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9072f04-af9f-43f2-9fe9-6cbe3552059f")
+	)
+	(wire
+		(pts
 			(xy 172.72 80.01) (xy 172.72 82.55)
 		)
 		(stroke
@@ -1381,6 +1557,46 @@
 	)
 	(wire
 		(pts
+			(xy 80.01 97.79) (xy 80.01 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e03b8212-ebc8-499c-824a-ad6661d22964")
+	)
+	(wire
+		(pts
+			(xy 81.28 100.33) (xy 81.28 165.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e28adf53-9dea-4d8d-90e2-bef958c9d28c")
+	)
+	(wire
+		(pts
+			(xy 167.64 87.63) (xy 180.34 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e91b203e-364c-4e64-be10-808b74cf0081")
+	)
+	(wire
+		(pts
+			(xy 119.38 85.09) (xy 119.38 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f4a76035-e14a-4f80-a23f-88af424d12db")
+	)
+	(wire
+		(pts
 			(xy 147.32 92.71) (xy 147.32 95.25)
 		)
 		(stroke
@@ -1388,6 +1604,16 @@
 			(type default)
 		)
 		(uuid "f52d9c1d-cf9e-4ed0-9128-f7dede898b64")
+	)
+	(wire
+		(pts
+			(xy 132.08 113.03) (xy 121.92 113.03)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fbcc393b-4426-4413-8d40-68499271fbac")
 	)
 	(label "3.3V"
 		(at 130.81 90.17 0)
@@ -1514,6 +1740,86 @@
 		)
 	)
 	(symbol
+		(lib_id "Switch:SW_Push")
+		(at 64.77 177.8 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "3b2b8a9e-fe4d-4ff8-969c-8f427b8dbf0c")
+		(property "Reference" "SW6"
+			(at 64.77 170.18 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SW_Push"
+			(at 64.77 172.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_DFN_QFN:Texas_RVA_VQFN-16-1EP_3.5x3.5mm_P0.5mm_EP2.14x2.14mm_ThermalVias"
+			(at 64.77 172.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 64.77 172.72 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Push button switch, generic, two pins"
+			(at 64.77 177.8 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d7f24f43-f250-4995-a214-633772e3ac2e")
+		)
+		(pin "2"
+			(uuid "225f4bd9-724c-405c-839d-6ee21c760e8f")
+		)
+		(instances
+			(project "Radio_Schematic"
+				(path "/45b700f0-d372-44fb-92b6-26c156c2429c"
+					(reference "SW6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:Antenna")
 		(at 172.72 74.93 0)
 		(unit 1)
@@ -1594,87 +1900,7 @@
 	)
 	(symbol
 		(lib_id "Switch:SW_Push")
-		(at 64.77 139.7 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "458cee67-8da6-4d38-bb97-91f5d165b75a")
-		(property "Reference" "SW5"
-			(at 64.77 132.08 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "SW_Push"
-			(at 64.77 134.62 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_DFN_QFN:Texas_RVA_VQFN-16-1EP_3.5x3.5mm_P0.5mm_EP2.14x2.14mm_ThermalVias"
-			(at 64.77 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 64.77 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Push button switch, generic, two pins"
-			(at 64.77 139.7 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "a2d5741d-ccf8-4cc8-b08c-b24a3f1e8ebf")
-		)
-		(pin "2"
-			(uuid "f5a41f32-7f18-4dc7-bdfd-2527a9b8d234")
-		)
-		(instances
-			(project "Radio_Schematic"
-				(path "/45b700f0-d372-44fb-92b6-26c156c2429c"
-					(reference "SW5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Switch:SW_Push")
-		(at 66.04 152.4 0)
+		(at 64.77 152.4 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1685,7 +1911,7 @@
 		(fields_autoplaced yes)
 		(uuid "56e407cf-4dfb-4564-95b8-e4899e4b1dbb")
 		(property "Reference" "SW4"
-			(at 66.04 144.78 0)
+			(at 64.77 144.78 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1695,7 +1921,7 @@
 			)
 		)
 		(property "Value" "SW_Push"
-			(at 66.04 147.32 0)
+			(at 64.77 147.32 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1705,7 +1931,7 @@
 			)
 		)
 		(property "Footprint" "Package_DFN_QFN:Texas_RVA_VQFN-16-1EP_3.5x3.5mm_P0.5mm_EP2.14x2.14mm_ThermalVias"
-			(at 66.04 147.32 0)
+			(at 64.77 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1716,7 +1942,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 66.04 147.32 0)
+			(at 64.77 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1727,7 +1953,7 @@
 			)
 		)
 		(property "Description" "Push button switch, generic, two pins"
-			(at 66.04 152.4 0)
+			(at 64.77 152.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1754,7 +1980,7 @@
 	)
 	(symbol
 		(lib_id "Switch:SW_Push")
-		(at 66.04 165.1 0)
+		(at 64.77 165.1 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1765,7 +1991,7 @@
 		(fields_autoplaced yes)
 		(uuid "cbe93756-d1ee-4912-b7c3-948f2184c669")
 		(property "Reference" "SW3"
-			(at 66.04 157.48 0)
+			(at 64.77 157.48 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1775,7 +2001,7 @@
 			)
 		)
 		(property "Value" "SW_Push"
-			(at 66.04 160.02 0)
+			(at 64.77 160.02 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1785,7 +2011,7 @@
 			)
 		)
 		(property "Footprint" "Package_DFN_QFN:Texas_RVA_VQFN-16-1EP_3.5x3.5mm_P0.5mm_EP2.14x2.14mm_ThermalVias"
-			(at 66.04 160.02 0)
+			(at 64.77 160.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1796,7 +2022,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 66.04 160.02 0)
+			(at 64.77 160.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1807,7 +2033,7 @@
 			)
 		)
 		(property "Description" "Push button switch, generic, two pins"
-			(at 66.04 165.1 0)
+			(at 64.77 165.1 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1857,6 +2083,7 @@
 		)
 		(property "Value" "Arduino_Nano_v3.x"
 			(at 99.9333 113.03 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2000,8 +2227,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Switch:SW_Push")
-		(at 64.77 127 0)
+		(lib_id "power:GND")
+		(at 132.08 113.03 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2010,9 +2237,10 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "fc7ae8fb-a945-4296-b08a-fbd8e5d8a8c2")
-		(property "Reference" "SW2"
-			(at 64.77 119.38 0)
+		(uuid "edee9196-d3f8-4d89-97d7-fe8aaea65bef")
+		(property "Reference" "#PWR02"
+			(at 132.08 119.38 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2021,8 +2249,8 @@
 				)
 			)
 		)
-		(property "Value" "SW_Push"
-			(at 64.77 121.92 0)
+		(property "Value" "GND"
+			(at 132.08 118.11 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2031,8 +2259,8 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_DFN_QFN:Texas_RVA_VQFN-16-1EP_3.5x3.5mm_P0.5mm_EP2.14x2.14mm_ThermalVias"
-			(at 64.77 121.92 0)
+		(property "Footprint" ""
+			(at 132.08 113.03 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2043,7 +2271,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 64.77 121.92 0)
+			(at 132.08 113.03 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2053,8 +2281,8 @@
 				)
 			)
 		)
-		(property "Description" "Push button switch, generic, two pins"
-			(at 64.77 127 0)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 132.08 113.03 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2065,15 +2293,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "974bb2b1-16d9-404d-bf82-de58e4727738")
-		)
-		(pin "2"
-			(uuid "ea232292-02a4-4bab-9ba4-62c29ac44e99")
+			(uuid "c6419c50-d8dd-4477-ae3d-856380adc4bd")
 		)
 		(instances
 			(project "Radio_Schematic"
 				(path "/45b700f0-d372-44fb-92b6-26c156c2429c"
-					(reference "SW2")
+					(reference "#PWR02")
 					(unit 1)
 				)
 			)
