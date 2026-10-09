@@ -1,0 +1,14 @@
+# backups & lockfiles
+*.bak
+*backups*
+*.lck
+*.lock
+~*
+*auto*save*
+*-bak
+
+# cache files
+fp-*cache
+
+# kicad user preferences
+.kicad_prl
