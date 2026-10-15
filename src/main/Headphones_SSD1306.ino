@@ -3,7 +3,7 @@
 void Headphones_SSD1306::drawScrollingText(char text[], int16_t *x, int8_t start, uint8_t flags, 
                       uint8_t scroll_speed, uint32_t *nextTime) 
 {
-  minX = -12 * strlen(text); //12 = 6 pixels/character * text size 2
+  int16_t minX = -12 * strlen(text); //12 = 6 pixels/character * text size 2
   setTextSize(2);
   setCursor(*x, start);
   print(text);
