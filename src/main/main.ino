@@ -10,10 +10,7 @@
 #include <SPI.h>
 #include <FS.h>
 
-// OLED screen I2C pins
-#define I2C_SDA   21
-#define I2C_SCL   22
-#define I2C_DEV_ADDR 0x55
+
 
 // SD card SPI pins
 #define SD_CS     13
@@ -21,9 +18,11 @@
 #define SD_MISO   19
 #define SD_MOSI   23
 
+// Display configuration
+#define I2C_SDA   21
+#define I2C_SCL   22
+#define I2C_DEV_ADDR 0x55
 Headphones_SSD1306 display(SCR_W, SCR_H, &Wire, OLED_RESET);
-//hw_timer_t *timer = NULL; // Hardware timer to update screen
-
 int16_t tcur = 0, acur = 0, alcur = 0;
 uint32_t startTime, ttime, atime, altime, lastscrtime;
 
@@ -36,6 +35,13 @@ uint32_t startTime, ttime, atime, altime, lastscrtime;
 #define AUDIO_SAMPLE_RATE 44100
 #define BITS_PER_SAMPLE   16
 
+#define METADATA_BUFFER_SIZE 128
+
+// NOTE: this should be increased in the future
+#define FILE_NAME_LIST_SIZE 20
+uint16_t fname_list_end = 0; // this points to the current end of the file name list
+uint16_t fname_list_idx = 0; // this points to our current index (what song we're playing)
+char* file_names[FILE_NAME_LIST_SIZE];
 
 AudioInfo info(AUDIO_SAMPLE_RATE, AUDIO_CHANNELS, BITS_PER_SAMPLE);
 
@@ -50,85 +56,20 @@ char* mp3title;
 char* mp3artist;
 char* mp3album;
 
-char* metadatalist[20];
-
-
-//AudioSourceSD source("/", ".mp3", SD_CS);
-//MP3DecoderHelix decoder;
-//AudioPlayer player(source, out, decoder);
-
-
-//SineWaveGenerator<int16_t> sineWave(32000);
-//GeneratedSoundStream<int16_t> sound(sineWave);
-
 void updateScreen();
 
-uint16_t idx = 0;
-void printMetaData(MetaDataType type, const char* str, int len) {
-  Serial.println(str);
+void addFname(char* name);
 
-  switch (type) {
-    case Title: {
-      static char titleBuf[128];
-      strncpy(titleBuf, str, sizeof(titleBuf) - 1);
-      titleBuf[sizeof(titleBuf) - 1] = '\0';
-      mp3title = titleBuf;
-      break;
-    }
-    case Artist: {
-      static char artistBuf[128];
-      strncpy(artistBuf, str, sizeof(artistBuf) - 1);
-      artistBuf[sizeof(artistBuf) - 1] = '\0';
-      mp3artist = artistBuf;
-      break;
-    }
-    case Album: {
-      static char albumBuf[128];
-      strncpy(albumBuf, str, sizeof(albumBuf) - 1);
-      albumBuf[sizeof(albumBuf) - 1] = '\0';
-      mp3album = albumBuf;
-      break;
-    }
-    default:
-      break;
-  }
-}
+// Print the song's metadata to Serial and update the strings that the screen uses
+void printMetaData(MetaDataType type, const char* str, int len);
 
+String findMP3s();
 
-String findFirstMP3() {
-    File root = SD.open("/");
-    if (!root) {
-        Serial.println("Failed to open SD root directory");
-        return "";
-    }
-
-    File entry;
-    while ((entry = root.openNextFile())) {
-        if (!entry.isDirectory()) {
-            String name = entry.name();
-            name.toLowerCase();
-
-            if (name.endsWith(".mp3")) {
-                String path = "/";
-                path += entry.name();
-
-                entry.close();
-                root.close();
-
-                return path;
-            }
-        }
-
-        entry.close();
-    }
-
-    root.close();
-    return "";
-}
+String findFirstMP3();
 
 void setup() 
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   //AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Info);
 
   out.add(outMeta);
@@ -151,7 +92,7 @@ void setup()
     }
   }
 
-  delay(100);
+  //delay(100);
 
   if (!SD.begin(SD_CS)) {
     Serial.println("SD initialization FAILED!");
@@ -195,7 +136,6 @@ void setup()
   out2dec.begin();
 
   
-
   /*player.setVolume(0.5);
   player.setPath(mp3Path.c_str());
   Serial.println(F("Playing song name "));
@@ -216,7 +156,6 @@ void loop()
 
 void updateScreen() {
   display.clearDisplay();
-  
 
   display.setTextColor(SSD1306_WHITE);
   display.setTextWrap(false);
@@ -224,9 +163,125 @@ void updateScreen() {
   display.setCursor(0, 0);
 
   display.println("WMTU");
-  display.drawScrollingText(mp3title, &tcur, 16, T_WAIT, 1, &ttime);
-  display.drawScrollingText(mp3artist, &acur, 32, T_WAIT, 4, &atime);
+  display.drawScrollingText(mp3title, &tcur, 16, T_WAIT, 2, &ttime);
+  display.drawScrollingText(mp3artist, &acur, 32, T_WAIT, 2, &atime);
   display.drawScrollingText(mp3album, &alcur, 48, T_WAIT, 2, &altime);
 
   display.display();
+}
+
+void printMetaData(MetaDataType type, const char* str, int len) {
+  Serial.println(str);
+
+  switch (type) {
+    case Title: {
+      static char titleBuf[METADATA_BUFFER_SIZE];
+      strncpy(titleBuf, str, sizeof(titleBuf) - 1);
+      titleBuf[sizeof(titleBuf) - 1] = '\0';
+      mp3title = titleBuf;
+      break;
+    }
+    case Artist: {
+      static char artistBuf[METADATA_BUFFER_SIZE];
+      strncpy(artistBuf, str, sizeof(artistBuf) - 1);
+      artistBuf[sizeof(artistBuf) - 1] = '\0';
+      mp3artist = artistBuf;
+      break;
+    }
+    case Album: {
+      static char albumBuf[METADATA_BUFFER_SIZE];
+      strncpy(albumBuf, str, METADATA_BUFFER_SIZE - 1);
+      albumBuf[METADATA_BUFFER_SIZE - 1] = '\0';
+      mp3album = albumBuf;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+/*
+ * Find all MP3s in the root directory and place them in the file name list.
+ * TOOD: if an entry is a directory, we could open it to look for more MP3s,
+ * that way the user can have folders of albums or playlists. This could be
+ * further improved by passing a directory in to findMP3s, allowing the user
+ * to open just one directory/playlist. The only problem with this is that
+ * at the moment, it would have to be hard-coded or written through Serial.
+*/
+String findMP3s() {
+  File root = SD.open("/");
+    if (!root) {
+      Serial.println("Failed to open SD root directory");
+      return "";
+    }
+
+    File entry;
+    while ((entry = root.openNextFile())) {
+      if (!entry.isDirectory()) {
+        
+        String name = entry.name();
+        name.toLowerCase();
+
+        if (name.endsWith(".mp3")) {
+          String path = "/";
+          path += entry.name();
+
+          addFname(path);
+        }
+      }
+
+      entry.close();
+    }
+
+    root.close();
+    return "";
+}
+
+// Add the filename specified by name to the fname_list
+void addFname(char* name) {
+  // If the file name list is full, start over at the beginning
+  // Additionally, if the list is not full then increment our end index
+  if (fname_list_idx > FILE_NAME_LIST_SIZE-1) {
+    fname_list_idx = 0;
+  } else {
+    fname_list_end++;
+  }
+
+  file_names[fname_list_idx] = name;
+  fname_list_idx++;
+}
+
+// LEGACY. May be removed soon, see findMP3s() instead
+String findFirstMP3() {
+    File root = SD.open("/");
+    if (!root) {
+      Serial.println("Failed to open SD root directory");
+      return "";
+    }
+
+    File entry;
+    while ((entry = root.openNextFile())) {
+      if (!entry.isDirectory()) {
+        
+        String name = entry.name();
+        name.toLowerCase();
+
+        if (name.endsWith(".mp3")) {
+          String path = "/";
+          path += entry.name();
+
+          file_name[fname_idx] = path;
+
+          entry.close();
+          root.close();
+
+          return path;
+        }
+      }
+
+      entry.close();
+    }
+
+    root.close();
+    return "";
 }
