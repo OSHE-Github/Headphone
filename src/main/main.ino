@@ -41,16 +41,23 @@ uint32_t startTime, ttime, atime, altime, lastscrtime;
 #define FILE_NAME_LIST_SIZE 20
 uint16_t fname_list_end = 0; // this points to the current end of the file name list
 uint16_t fname_list_idx = 0; // this points to our current index (what song we're playing)
-char* file_names[FILE_NAME_LIST_SIZE];
+String file_names[FILE_NAME_LIST_SIZE];
 
 AudioInfo info(AUDIO_SAMPLE_RATE, AUDIO_CHANNELS, BITS_PER_SAMPLE);
 
-File audioFile;
+
+// Previous audio system
+/*File audioFile;
 MetaDataOutput outMeta;
 I2SStream i2s;
 EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
 MultiOutput out;
-StreamCopy copier(out, audioFile);
+StreamCopy copier(out, audioFile);*/
+
+AudioSourceSD source("/", "mp3");
+I2SStream i2s;
+MP3DecoderHelix decoder;
+AudioPlayer player(source, i2s, decoder);
 
 char* mp3title;
 char* mp3artist;
@@ -70,10 +77,6 @@ String findFirstMP3();
 void setup() 
 {
   Serial.begin(115200);
-  //AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Info);
-
-  out.add(outMeta);
-  out.add(out2dec);
 
   Wire.begin(I2C_SDA, I2C_SCL);
   
@@ -108,20 +111,6 @@ void setup()
   altime = startTime;
   lastscrtime = startTime;
 
-  String mp3Path = findFirstMP3();
-
-  if (mp3Path.isEmpty()) {
-    Serial.println("No MP3 files found in root directory!");
-    while (true) {
-      delay(1000);
-    }
-  }
-
-  audioFile = SD.open(mp3Path);
-
-  outMeta.setCallback(printMetaData);
-  outMeta.begin();
-
   // Configure the I2S system
   auto config = i2s.defaultConfig(TX_MODE);
   config.copyFrom(info);
@@ -132,15 +121,10 @@ void setup()
   config.i2s_format = I2S_STD_FORMAT;
   i2s.begin(config);
 
-  //out.setVolume(0.5);
-  out2dec.begin();
-
   
-  /*player.setVolume(0.5);
-  player.setPath(mp3Path.c_str());
-  Serial.println(F("Playing song name "));
-  Serial.println(mp3Path.c_str());
-  player.begin();*/
+  player.setVolume(0.5);
+  player.setMetadataCallback(printMetaData);
+  player.begin();
 }
 
 void loop() 
@@ -150,9 +134,16 @@ void loop()
     lastscrtime = now;
     updateScreen();
   }
+
   
-  copier.copy();
+  
+  player.copy();
 }
+
+
+
+
+
 
 void updateScreen() {
   display.clearDisplay();
@@ -169,6 +160,8 @@ void updateScreen() {
 
   display.display();
 }
+
+
 
 void printMetaData(MetaDataType type, const char* str, int len) {
   Serial.println(str);
@@ -237,8 +230,10 @@ String findMP3s() {
     return "";
 }
 
+
+
 // Add the filename specified by name to the fname_list
-void addFname(char* name) {
+void addFname(String name) {
   // If the file name list is full, start over at the beginning
   // Additionally, if the list is not full then increment our end index
   if (fname_list_idx > FILE_NAME_LIST_SIZE-1) {
@@ -270,7 +265,7 @@ String findFirstMP3() {
           String path = "/";
           path += entry.name();
 
-          file_name[fname_idx] = path;
+          addFname(path);
 
           entry.close();
           root.close();
