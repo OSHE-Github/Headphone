@@ -47,6 +47,8 @@ MultiOutput out;
 StreamCopy copier(out, audioFile);
 
 char* mp3title;
+char* mp3artist;
+char* mp3album;
 
 char* metadatalist[20];
 
@@ -63,14 +65,35 @@ void updateScreen();
 
 uint16_t idx = 0;
 void printMetaData(MetaDataType type, const char* str, int len) {
-  Serial.println(F(str));
-  metadatalist[idx] = (char*) str;
-  idx++;
-  if (idx == 20) {
-    idx = 0;
+  Serial.println(str);
+
+  switch (type) {
+    case Title: {
+      static char titleBuf[128];
+      strncpy(titleBuf, str, sizeof(titleBuf) - 1);
+      titleBuf[sizeof(titleBuf) - 1] = '\0';
+      mp3title = titleBuf;
+      break;
+    }
+    case Artist: {
+      static char artistBuf[128];
+      strncpy(artistBuf, str, sizeof(artistBuf) - 1);
+      artistBuf[sizeof(artistBuf) - 1] = '\0';
+      mp3artist = artistBuf;
+      break;
+    }
+    case Album: {
+      static char albumBuf[128];
+      strncpy(albumBuf, str, sizeof(albumBuf) - 1);
+      albumBuf[sizeof(albumBuf) - 1] = '\0';
+      mp3album = albumBuf;
+      break;
+    }
+    default:
+      break;
   }
-  mp3title = metadatalist[0];
 }
+
 
 String findFirstMP3() {
     File root = SD.open("/");
@@ -202,8 +225,8 @@ void updateScreen() {
 
   display.println("WMTU");
   display.drawScrollingText(mp3title, &tcur, 16, T_WAIT, 1, &ttime);
-  display.drawScrollingText("Artist!!", &acur, 32, T_WAIT, 4, &atime);
-  display.drawScrollingText("Album...", &alcur, 48, T_WAIT, 2, &altime);
+  display.drawScrollingText(mp3artist, &acur, 32, T_WAIT, 4, &atime);
+  display.drawScrollingText(mp3album, &alcur, 48, T_WAIT, 2, &altime);
 
   display.display();
 }
