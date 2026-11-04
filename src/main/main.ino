@@ -9,6 +9,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include <FS.h>
+#include "Shuffle.h"
 
 // OLED screen I2C pins
 #define I2C_SDA   21
@@ -25,7 +26,8 @@
 #define BTN_PLAY  32
 #define BTN_PREV  14
 
-#define DEBOUNCE_MS  30
+#define DEBOUNCE_MS     30
+#define PLAYBACK_STACK  16384
 
 Headphones_SSD1306 display(SCR_W, SCR_H, &Wire, OLED_RESET);
 
@@ -49,6 +51,8 @@ EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
 MultiOutput out;
 StreamCopy copier(out, audioFile);
 
+ShufflePlaylist playlist;
+
 void updateScreen();
 
 struct TrackInfo {
@@ -58,15 +62,16 @@ struct TrackInfo {
   char path[128];
 };
 
-TrackInfo current;   // the only song you display
+TrackInfo current;
 
 // ---------- Playback state (shared with button task) ----------
 volatile bool needAdvance  = false;
 volatile bool needPrevious = false;
 volatile bool needScreen   = false;
+volatile bool needRedraw   = false;
 volatile bool paused       = false;
 
-uint8_t silence[512] = {0};   // written to I2S while paused
+uint8_t silence[512] = {0};
 
 // ---------- Button handling ----------
 struct Button {
@@ -80,7 +85,6 @@ Button btnNext = {BTN_NEXT, HIGH, HIGH, 0};
 Button btnPlay = {BTN_PLAY, HIGH, HIGH, 0};
 Button btnPrev = {BTN_PREV, HIGH, HIGH, 0};
 
-// Returns true once per press (debounced HIGH -> LOW edge)
 bool buttonPressed(Button& b) {
   bool reading = digitalRead(b.pin);
   uint32_t now = millis();
@@ -97,7 +101,6 @@ bool buttonPressed(Button& b) {
   return false;
 }
 
-// Runs on its own, every 5 ms, independent of audio
 void buttonTask(void* param) {
   for (;;) {
     if (buttonPressed(btnPlay)) {
@@ -105,17 +108,14 @@ void buttonTask(void* param) {
       needScreen = true;
       Serial.println(paused ? "BTN: pause" : "BTN: play");
     }
-
     if (buttonPressed(btnNext)) {
       Serial.println("BTN: next");
       needAdvance = true;
     }
-
     if (buttonPressed(btnPrev)) {
       Serial.println("BTN: previous");
       needPrevious = true;
     }
-
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
@@ -131,19 +131,22 @@ void printMetaData(MetaDataType type, const char* str, int len) {
   }
 }
 
-void loadTrack(const String& path) {
+void loadTrack(const char* path) {
   if (audioFile) audioFile.close();
   memset(&current, 0, sizeof(current));
-  snprintf(current.path, sizeof(current.path), "%s", path.c_str());
+  if (!path || !path[0]) return;
+  snprintf(current.path, sizeof(current.path), "%s", path);
 
   audioFile = SD.open(path);
   if (!audioFile) {
-    Serial.printf("loadTrack: failed to open %s\n", path.c_str());
+    Serial.printf("loadTrack: failed to open %s\n", path);
     return;
   }
-  Serial.printf("Now playing: %s\n", path.c_str());
+  Serial.printf("Now playing [%u/%u]: %s\n",
+                (unsigned)playlist.position() + 1, (unsigned)playlist.size(), path);
 
-  snprintf(current.title, sizeof(current.title), "%s", path.c_str() + 1);
+  // fallback title = file name until ID3 arrives
+  snprintf(current.title, sizeof(current.title), "%s", path[0] == '/' ? path + 1 : path);
 
   outMeta.end();  outMeta.begin();
   out2dec.end();  out2dec.begin();
@@ -151,95 +154,43 @@ void loadTrack(const String& path) {
 
   tcur = acur = alcur = 0;
   ttime = atime = altime = millis();
+  needRedraw = true;
 }
 
-// ---------- File finding ----------
-String findFirstMP3() {
-  File root = SD.open("/");
-  if (!root) {
-    Serial.println("Failed to open SD root directory");
-    return "";
-  }
-
-  File entry;
-  while ((entry = root.openNextFile())) {
-    if (!entry.isDirectory()) {
-      String name = entry.name();
-      name.toLowerCase();
-      if (name.endsWith(".mp3")) {
-        String path = "/";
-        path += entry.name();
-        entry.close();
-        root.close();
-        return path;
-      }
+// ---------- Playback task ----------
+void playbackTask(void* param) {
+  for (;;) {
+    if (needAdvance) {
+      needAdvance = false;
+      loadTrack(playlist.next());
+      paused = false;
     }
-    entry.close();
-  }
 
-  root.close();
-  return "";
-}
-
-String findNextMP3(const String& currentPath) {
-  File root = SD.open("/");
-  if (!root) return "";
-
-  bool foundCurrent = false;
-  String first = "", next = "";
-  File entry;
-
-  while ((entry = root.openNextFile())) {
-    if (!entry.isDirectory()) {
-      String name = entry.name();
-      String lower = name;
-      lower.toLowerCase();
-      if (lower.endsWith(".mp3")) {
-        String path = "/";
-        path += name;
-        if (first.isEmpty()) first = path;
-        if (foundCurrent && next.isEmpty()) next = path;
-        if (path == currentPath) foundCurrent = true;
-      }
+    if (needPrevious) {
+      needPrevious = false;
+      loadTrack(playlist.prev());
+      paused = false;
     }
-    entry.close();
-  }
-  root.close();
 
-  if (!next.isEmpty()) return next;
-  return first;
-}
-
-String findPrevMP3(const String& currentPath) {
-  File root = SD.open("/");
-  if (!root) return "";
-
-  String prev = "", last = "", result = "";
-  bool found = false;
-  File entry;
-
-  while ((entry = root.openNextFile())) {
-    if (!entry.isDirectory()) {
-      String name = entry.name();
-      String lower = name;
-      lower.toLowerCase();
-      if (lower.endsWith(".mp3")) {
-        String path = "/";
-        path += name;
-        if (!found && path == currentPath) {
-          found = true;
-          result = prev;
-        }
-        prev = path;
-        last = path;
-      }
+    uint32_t now = millis();
+    if (needScreen || needRedraw || (now - lastscrtime) >= 300) {
+      needScreen = false;
+      needRedraw = false;
+      lastscrtime = now;
+      updateScreen();
     }
-    entry.close();
-  }
-  root.close();
 
-  if (!result.isEmpty()) return result;
-  return last;   // current was first -> wrap to last song
+    if (paused) {
+      i2s.write(silence, sizeof(silence));   // blocks until I2S has room
+      continue;
+    }
+
+    size_t n = copier.copy();
+    if (n == 0) {
+      if (!audioFile || !audioFile.available()) needAdvance = true;
+      vTaskDelay(1);
+    }
+  }
 }
 
 // ---------- Setup ----------
@@ -250,7 +201,6 @@ void setup()
   pinMode(BTN_NEXT, INPUT_PULLUP);
   pinMode(BTN_PLAY, INPUT_PULLUP);
   pinMode(BTN_PREV, INPUT_PULLUP);
-
 
   out.add(outMeta);
   out.add(out2dec);
@@ -263,6 +213,11 @@ void setup()
     while (1);
   }
   display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  display.println("OSHE: Scanning");
+  display.display();
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
   delay(100);
@@ -272,14 +227,17 @@ void setup()
     while (true) delay(1000);
   }
 
-  startTime = millis();
-  ttime = atime = altime = lastscrtime = startTime;
-
-  String mp3Path = findFirstMP3();
-  if (mp3Path.isEmpty()) {
+  uint32_t t0 = millis();
+  size_t count = playlist.scan(SD, "/");
+  Serial.printf("Scanned %u tracks in %lu ms\n", (unsigned)count, millis() - t0);
+  if (count == 0) {
     Serial.println("No MP3 files found in root directory!");
     while (true) delay(1000);
   }
+  playlist.printOrder(Serial);
+
+  startTime = millis();
+  ttime = atime = altime = lastscrtime = startTime;
 
   auto config = i2s.defaultConfig(TX_MODE);
   config.copyFrom(info);
@@ -289,57 +247,23 @@ void setup()
   config.is_master = true;
   config.i2s_format = I2S_STD_FORMAT;
   config.buffer_count = 16;
-  config.buffer_size = 1024;
+  config.buffer_size = 4096;
   i2s.begin(config);
 
   outMeta.setCallback(printMetaData);
-  loadTrack(mp3Path);
+  loadTrack(playlist.current());
 
-  // Button reader on core 0 (loop() runs on core 1)
-  xTaskCreatePinnedToCore(buttonTask, "buttons", 4096, NULL, 2, NULL, 0);
+  xTaskCreatePinnedToCore(buttonTask,   "buttons",  4096,           NULL, 2, NULL, 0);
+  xTaskCreatePinnedToCore(playbackTask, "playback", PLAYBACK_STACK, NULL, 3, NULL, 1);
 }
 
-// ---------- Loop ----------
-void loop()
-{
-  if (needAdvance) {
-    needAdvance = false;
-    String next = findNextMP3(String(current.path));
-    if (next.isEmpty()) next = findFirstMP3();
-    if (!next.isEmpty()) loadTrack(next);
-    paused = false;
-  }
-
-  if (needPrevious) {
-    needPrevious = false;
-    String prev = findPrevMP3(String(current.path));
-    if (!prev.isEmpty()) loadTrack(prev);
-    paused = false;
-  }
-
-  uint32_t now = millis();
-  if (needScreen || (now - lastscrtime) >= 300) {
-    needScreen = false;
-    lastscrtime = now;
-    updateScreen();
-  }
-
-  if (paused) {
-    i2s.write(silence, sizeof(silence));
-    return;
-  }
-
-  size_t n = copier.copy();
-
-  if (n == 0 && !audioFile.available()) {
-    needAdvance = true;
-  }
+void loop() {
+  vTaskDelete(NULL);   // all work is in the tasks; frees loopTask's stack
 }
 
 // ---------- Display ----------
 void updateScreen() {
   display.clearDisplay();
-
   display.setTextColor(SSD1306_WHITE);
   display.setTextWrap(false);
   display.setTextSize(2);
