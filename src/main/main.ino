@@ -129,7 +129,7 @@ void buttonTask(void* param) {
       Serial.println("BTN: shuffle");
       needShuffle = true;
     }*/
-    
+
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
@@ -174,14 +174,14 @@ void loadTrack(const char* path) {
 // ---------- Playback task ----------
 void playbackTask(void* param) {
   for (;;) {
-    if (needShuffle) {
+    /*if (needShuffle) {
       needShuffle = false;
       playlist.toggleShuffleFlag();
       
       // HACKHACKHACK this should be another function, stopping all playback and going back to scanning
       // could take a lot of time if there are a lot of files.
       playlist.scan(SD, "/");
-    }
+    }*/
 
     if (needAdvance) {
       needAdvance = false;
