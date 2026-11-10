@@ -1,6 +1,22 @@
 #include "Shuffle.h"
 #include <algorithm>
 
+
+// shuffle flag management
+bool ShufflePlaylist::getShuffleFlag() {
+  return shuffle_flag;
+}
+
+bool ShufflePlaylist::toggleShuffleFlag() {
+  shuffle_flag = !shuffle_flag;
+  return shuffle_flag;
+}
+
+void ShufflePlaylist::setShuffleFlag(bool flag) {
+  shuffle_flag = flag;
+}
+
+
 // ---------- helpers ----------
 static uint32_t rnd(uint32_t n) { return n ? esp_random() % n : 0; }
 static float    rnd01()         { return (esp_random() >> 8) / 16777216.0f; }
@@ -120,7 +136,9 @@ size_t ShufflePlaylist::scan(fs::FS& fs, const char* dir) {
   }
   root.close();
 
-  shuffle();
+  if (getShuffleFlag() == true)
+    shuffle();
+  
   return tracks.size();
 }
 

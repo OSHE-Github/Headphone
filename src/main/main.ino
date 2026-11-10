@@ -25,6 +25,7 @@
 #define BTN_NEXT  33
 #define BTN_PLAY  32
 #define BTN_PREV  14
+#define BTN_SHUF  15
 
 #define DEBOUNCE_MS     30
 #define PLAYBACK_STACK  16384
@@ -47,7 +48,10 @@ AudioInfo info(AUDIO_SAMPLE_RATE, AUDIO_CHANNELS, BITS_PER_SAMPLE);
 File audioFile;
 MetaDataOutput outMeta;
 I2SStream i2s;
-EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
+Equalizer3Bands eq(i2s);
+ConfigEqualizer3Bands cfg_eq;
+EncodedAudioStream out2dec(&eq, new MP3DecoderHelix());
+
 MultiOutput out;
 StreamCopy copier(out, audioFile);
 
@@ -68,6 +72,7 @@ TrackInfo current;
 volatile bool needAdvance  = false;
 volatile bool needPrevious = false;
 volatile bool needScreen   = false;
+volatile bool needShuffle  = false;
 volatile bool needRedraw   = false;
 volatile bool paused       = false;
 
@@ -84,6 +89,7 @@ struct Button {
 Button btnNext = {BTN_NEXT, HIGH, HIGH, 0};
 Button btnPlay = {BTN_PLAY, HIGH, HIGH, 0};
 Button btnPrev = {BTN_PREV, HIGH, HIGH, 0};
+Button btnShuf = {BTN_SHUF, HIGH, HIGH, 0};
 
 bool buttonPressed(Button& b) {
   bool reading = digitalRead(b.pin);
@@ -108,14 +114,22 @@ void buttonTask(void* param) {
       needScreen = true;
       Serial.println(paused ? "BTN: pause" : "BTN: play");
     }
+
     if (buttonPressed(btnNext)) {
       Serial.println("BTN: next");
       needAdvance = true;
     }
+
     if (buttonPressed(btnPrev)) {
       Serial.println("BTN: previous");
       needPrevious = true;
     }
+
+    /*if (buttonPressed(btnShuf)) {
+      Serial.println("BTN: shuffle");
+      needShuffle = true;
+    }*/
+    
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
@@ -160,6 +174,15 @@ void loadTrack(const char* path) {
 // ---------- Playback task ----------
 void playbackTask(void* param) {
   for (;;) {
+    if (needShuffle) {
+      needShuffle = false;
+      playlist.toggleShuffleFlag();
+      
+      // HACKHACKHACK this should be another function, stopping all playback and going back to scanning
+      // could take a lot of time if there are a lot of files.
+      playlist.scan(SD, "/");
+    }
+
     if (needAdvance) {
       needAdvance = false;
       loadTrack(playlist.next());
@@ -201,6 +224,7 @@ void setup()
   pinMode(BTN_NEXT, INPUT_PULLUP);
   pinMode(BTN_PLAY, INPUT_PULLUP);
   pinMode(BTN_PREV, INPUT_PULLUP);
+  pinMode(BTN_SHUF, INPUT_PULLUP);
 
   out.add(outMeta);
   out.add(out2dec);

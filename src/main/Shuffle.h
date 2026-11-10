@@ -23,6 +23,10 @@ public:
 
   void printOrder(Print& out, size_t maxLines = 30) const;
 
+  bool getShuffleFlag();
+  bool toggleShuffleFlag();
+  void setShuffleFlag(bool flag);
+
 private:
   struct Track {
     String   path;
@@ -37,4 +41,6 @@ private:
   static uint32_t readArtist(fs::File& f, const char* fileName);
   static std::vector<uint16_t> interleave(const std::vector<uint16_t>& a,
                                           const std::vector<uint16_t>& b);
+
+  bool shuffle_flag = true;
 };
