@@ -10,6 +10,7 @@
 #include <SPI.h>
 #include <FS.h>
 #include "Shuffle.h"
+#include "EQSettings.h"
 
 // OLED screen I2C pins
 #define I2C_SDA   21
@@ -50,7 +51,7 @@ MetaDataOutput outMeta;
 I2SStream i2s;
 Equalizer3Bands eq(i2s);
 ConfigEqualizer3Bands cfg_eq;
-EncodedAudioStream out2dec(&eq, new MP3DecoderHelix());
+EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
 
 MultiOutput out;
 StreamCopy copier(out, audioFile);
@@ -130,7 +131,7 @@ void buttonTask(void* param) {
       needShuffle = true;
     }*/
 
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
 
@@ -183,6 +184,16 @@ void playbackTask(void* param) {
       playlist.scan(SD, "/");
     }*/
 
+    if (!paused) {
+      uint32_t n = copier.copy();
+      if (n == 0) {
+        if (!audioFile || !audioFile.available()) needAdvance = true;
+        vTaskDelay(1);
+      }
+    } else {
+      i2s.write(silence, sizeof(silence));   // blocks until I2S has room
+    }
+
     if (needAdvance) {
       needAdvance = false;
       loadTrack(playlist.next());
@@ -196,23 +207,22 @@ void playbackTask(void* param) {
     }
 
     uint32_t now = millis();
-    if (needScreen || needRedraw || (now - lastscrtime) >= 300) {
+    if (needScreen || needRedraw || (now - lastscrtime) >= 360) {
       needScreen = false;
       needRedraw = false;
       lastscrtime = now;
       updateScreen();
     }
 
-    if (paused) {
-      i2s.write(silence, sizeof(silence));   // blocks until I2S has room
-      continue;
-    }
+    
 
-    size_t n = copier.copy();
-    if (n == 0) {
+    
+
+    //size_t n = copier.copy();
+    /*if (n == 0) {
       if (!audioFile || !audioFile.available()) needAdvance = true;
       vTaskDelay(1);
-    }
+    }*/
   }
 }
 
@@ -270,9 +280,12 @@ void setup()
   config.pin_data = I2S_DATA;
   config.is_master = true;
   config.i2s_format = I2S_STD_FORMAT;
-  config.buffer_count = 16;
-  config.buffer_size = 4096;
+  config.buffer_count = I2S_BUFFER_COUNT;
+  config.buffer_size = 1024;
   i2s.begin(config);
+
+  initPresets();
+  initEQcfg(&eq, &cfg_eq);
 
   outMeta.setCallback(printMetaData);
   loadTrack(playlist.current());
