@@ -183,6 +183,7 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
     case ButtonEvents::Event::HOLDING:
       break;
     case ButtonEvents::Event::RELEASED:
+      
       break;
     case ButtonEvents::Event::SEQUENCE:
       if (data.count == 1) {
