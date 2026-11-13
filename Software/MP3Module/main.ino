@@ -11,6 +11,7 @@
 #include <FS.h>
 #include "Shuffle.h"
 #include "EQSettings.h"
+#include <ButtonEvents.h>
 
 // OLED screen I2C pins
 #define I2C_SDA   21
@@ -22,11 +23,11 @@
 #define SD_MISO   19
 #define SD_MOSI   23
 
-// Button pins (buttons connect pin to GND when pressed)
-#define BTN_NEXT  33
-#define BTN_PLAY  32
-#define BTN_PREV  14
-#define BTN_SHUF  15
+// Rotary Encoder pins
+#define DI_ENCODER_CLK  15
+#define DI_ENCODER_DT   14
+#define DI_ENCODER_SW   32
+static ButtonEvents encoder_sw(DI_ENCODER_SW);
 
 #define DEBOUNCE_MS     30
 #define PLAYBACK_STACK  16384
@@ -60,6 +61,10 @@ ShufflePlaylist playlist;
 
 void updateScreen();
 
+// Rotary Encoder callbacks
+//void knobCallback(long value);
+//void buttonCallback(unsigned long duration);
+
 struct TrackInfo {
   char title[128];
   char artist[128];
@@ -78,62 +83,6 @@ volatile bool needRedraw   = false;
 volatile bool paused       = false;
 
 uint8_t silence[512] = {0};
-
-// ---------- Button handling ----------
-struct Button {
-  uint8_t  pin;
-  bool     stableState;
-  bool     lastReading;
-  uint32_t lastChange;
-};
-
-Button btnNext = {BTN_NEXT, HIGH, HIGH, 0};
-Button btnPlay = {BTN_PLAY, HIGH, HIGH, 0};
-Button btnPrev = {BTN_PREV, HIGH, HIGH, 0};
-Button btnShuf = {BTN_SHUF, HIGH, HIGH, 0};
-
-bool buttonPressed(Button& b) {
-  bool reading = digitalRead(b.pin);
-  uint32_t now = millis();
-
-  if (reading != b.lastReading) {
-    b.lastChange = now;
-    b.lastReading = reading;
-  }
-
-  if ((now - b.lastChange) > DEBOUNCE_MS && reading != b.stableState) {
-    b.stableState = reading;
-    if (b.stableState == LOW) return true;
-  }
-  return false;
-}
-
-void buttonTask(void* param) {
-  for (;;) {
-    if (buttonPressed(btnPlay)) {
-      paused = !paused;
-      needScreen = true;
-      Serial.println(paused ? "BTN: pause" : "BTN: play");
-    }
-
-    if (buttonPressed(btnNext)) {
-      Serial.println("BTN: next");
-      needAdvance = true;
-    }
-
-    if (buttonPressed(btnPrev)) {
-      Serial.println("BTN: previous");
-      needPrevious = true;
-    }
-
-    /*if (buttonPressed(btnShuf)) {
-      Serial.println("BTN: shuffle");
-      needShuffle = true;
-    }*/
-
-    vTaskDelay(pdMS_TO_TICKS(20));
-  }
-}
 
 // ---------- Metadata ----------
 void printMetaData(MetaDataType type, const char* str, int len) {
@@ -226,15 +175,36 @@ void playbackTask(void* param) {
   }
 }
 
+static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData& data,
+                     ButtonEvents&) {
+  switch (event) {
+    case ButtonEvents::Event::PRESSED:
+      break;
+    case ButtonEvents::Event::HOLDING:
+      break;
+    case ButtonEvents::Event::RELEASED:
+      break;
+    case ButtonEvents::Event::SEQUENCE:
+      if (data.count == 1) {
+        paused = !paused;
+      } else if (data.count == 2) {
+        needAdvance = true;
+        paused = false;
+      } else {
+        needPrevious = true;
+        paused = false;
+      }
+
+      Serial.print(F("sequence of "));
+      Serial.println(data.count);
+      break;
+  }
+}
+
 // ---------- Setup ----------
 void setup()
 {
   Serial.begin(115200);
-
-  pinMode(BTN_NEXT, INPUT_PULLUP);
-  pinMode(BTN_PLAY, INPUT_PULLUP);
-  pinMode(BTN_PREV, INPUT_PULLUP);
-  pinMode(BTN_SHUF, INPUT_PULLUP);
 
   out.add(outMeta);
   out.add(out2dec);
@@ -290,12 +260,46 @@ void setup()
   outMeta.setCallback(printMetaData);
   loadTrack(playlist.current());
 
-  xTaskCreatePinnedToCore(buttonTask,   "buttons",  4096,           NULL, 2, NULL, 0);
+  pinMode(DI_ENCODER_CLK, INPUT);
+  pinMode(DI_ENCODER_DT, INPUT);
+  encoder_sw.onEvent(onEncoderSW);
+  encoder_sw.begin();
+
   xTaskCreatePinnedToCore(playbackTask, "playback", PLAYBACK_STACK, NULL, 3, NULL, 1);
 }
 
 void loop() {
-  vTaskDelete(NULL);   // all work is in the tasks; frees loopTask's stack
+  encoder_sw.update();
+  static uint8_t p_cstate = HIGH;
+
+  //-1 for CCW, 0 for no turn, 1 for CW
+  int8_t dir = 0;
+  uint8_t c_cstate = digitalRead(DI_ENCODER_CLK);
+
+  if (p_cstate != c_cstate && c_cstate == HIGH) {
+    if (digitalRead(DI_ENCODER_DT) == LOW) {
+      dir = -1;
+    } else {
+      dir = 1;
+    }
+  } else {
+    dir = 0;
+  }
+
+  // Trigger turn event
+  if (dir != 0) {
+    Serial.printf("Direction: %d\n", dir, p_cstate, c_cstate);
+  }
+
+  if (dir == 1) {
+    needAdvance = true;
+  } else if (dir == -1) {
+    needPrevious = true;
+  }
+
+  p_cstate = c_cstate;
+
+  delay(10);
 }
 
 // ---------- Display ----------
