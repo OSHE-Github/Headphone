@@ -77,22 +77,18 @@ void setup() {
 
   Serial.println("Starting radio...");
 
-  rx.setup();
+  radio.setup();
 
-  rx.setFrequency(currentFrequency);
-  rx.setVolume(15);
-  rx.setMute(false);
-  rx.setMono(true); // Why are we in mono??
-  rx.setSoftmute(false);
+  radio.setFrequency(currentFrequency);
+  radio.setVolume(15);
+  radio.setMute(false);
+  radio.setMono(true); // Why are we in mono??
+  radio.setSoftmute(false);
 
   delay(500);
 
   Serial.println("Radio ready!");
   displayFrequency();
-
-  Serial.println("D8: Tune Down");
-  Serial.println("D9: Tune Up");
-  Serial.println("D10: Preset 91.9 MHz");
 }
 
 void loop() {
