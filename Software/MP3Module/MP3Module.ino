@@ -14,7 +14,6 @@
 #include <ButtonEvents.h>
 #include "BluetoothA2DPSink.h"
 
-
 // OLED screen I2C pins
 #define I2C_SDA   21
 #define I2C_SCL   22
@@ -126,14 +125,23 @@ void loadTrack(const char* path) {
 // ---------- Playback task ----------
 void playbackTask(void* param) {
   for (;;) {
-    /*if (needShuffle) {
+    if (needShuffle) {
       needShuffle = false;
-      playlist.toggleShuffleFlag();
-      
-      // HACKHACKHACK this should be another function, stopping all playback and going back to scanning
-      // could take a lot of time if there are a lot of files.
-      playlist.scan(SD, "/");
-    }*/
+
+      bool enabled = !playlist.toggleShuffleFlag();
+
+      if (enabled) {
+        playlist.shuffle();
+        Serial.println("Shuffle ENABLED");
+        bool enabled = playlist.toggleShuffleFlag();
+      } else {
+        playlist.shuffle();
+        Serial.println("Shuffle DISABLED");
+      }
+
+    playlist.printOrder(Serial);
+    }
+
 
     if (!paused) {
       uint32_t n = copier.copy();
@@ -189,11 +197,12 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
       } else if (data.count == 2) {
         needAdvance = true;
         paused = false;
-      } else {
+      } else if (data.count == 3) {
         needPrevious = true;
         paused = false;
+      } else if (data.count == 4) {
+        needShuffle = true;
       }
-
       Serial.print(F("sequence of "));
       Serial.println(data.count);
       break;
