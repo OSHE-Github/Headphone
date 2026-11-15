@@ -12,6 +12,8 @@
 #include "Shuffle.h"
 #include "EQSettings.h"
 #include <ButtonEvents.h>
+#include "BluetoothA2DPSink.h"
+
 
 // OLED screen I2C pins
 #define I2C_SDA   21
@@ -62,14 +64,14 @@ ShufflePlaylist playlist;
 void updateScreen();
 
 // Rotary Encoder callbacks
-//void knobCallback(long value);
-//void buttonCallback(unsigned long duration);
+// void knobCallback(long value);
+// void buttonCallback(unsigned long duration);
 
 struct TrackInfo {
-  char title[128];
-  char artist[128];
-  char album[128];
-  char path[128];
+  char title[256];
+  char artist[256];
+  char album[256];
+  char path[256];
 };
 
 TrackInfo current;
@@ -162,10 +164,6 @@ void playbackTask(void* param) {
       lastscrtime = now;
       updateScreen();
     }
-
-    
-
-    
 
     //size_t n = copier.copy();
     /*if (n == 0) {
@@ -312,8 +310,32 @@ void updateScreen() {
   display.setCursor(0, 0);
 
   display.println(paused ? "PAUSE" : "WMTU");
-  display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 1, &ttime);
-  display.drawScrollingText(current.artist, &acur,  32, T_WAIT, 4, &atime);
-  display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 2, &altime);
+
+  if (strlen(current.title) > 12) {
+    display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 1, &ttime);
+  }
+  else
+  {
+    display.setCursor(0, 16);
+    display.println(current.title);
+  }
+
+   if (strlen(current.artist) > 12) {
+    display.drawScrollingText(current.artist,  &acur,  32, T_WAIT, 4, &atime);
+  }
+  else
+  {
+    display.setCursor(0, 32);
+    display.println(current.artist);
+  }
+
+   if (strlen(current.album) > 12) {
+    display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 2, &altime);
+  }
+  else
+  {
+    display.setCursor(0, 48);
+    display.println(current.album);
+  }
   display.display();
 }
