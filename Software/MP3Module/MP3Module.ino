@@ -12,6 +12,7 @@
 #include "Shuffle.h"
 #include "EQSettings.h"
 #include <ButtonEvents.h>
+#include "BluetoothA2DPSink.h"
 
 // OLED screen I2C pins
 #define I2C_SDA   21
@@ -52,7 +53,7 @@ MetaDataOutput outMeta;
 I2SStream i2s;
 Equalizer3Bands eq(i2s);
 ConfigEqualizer3Bands cfg_eq;
-EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
+EncodedAudioStream out2dec(&eq, new MP3DecoderHelix());
 
 MultiOutput out;
 StreamCopy copier(out, audioFile);
@@ -62,14 +63,14 @@ ShufflePlaylist playlist;
 void updateScreen();
 
 // Rotary Encoder callbacks
-//void knobCallback(long value);
-//void buttonCallback(unsigned long duration);
+// void knobCallback(long value);
+// void buttonCallback(unsigned long duration);
 
 struct TrackInfo {
-  char title[128];
-  char artist[128];
-  char album[128];
-  char path[128];
+  char title[256];
+  char artist[256];
+  char album[256];
+  char path[256];
 };
 
 TrackInfo current;
@@ -124,14 +125,23 @@ void loadTrack(const char* path) {
 // ---------- Playback task ----------
 void playbackTask(void* param) {
   for (;;) {
-    /*if (needShuffle) {
+    if (needShuffle) {
       needShuffle = false;
-      playlist.toggleShuffleFlag();
-      
-      // HACKHACKHACK this should be another function, stopping all playback and going back to scanning
-      // could take a lot of time if there are a lot of files.
-      playlist.scan(SD, "/");
-    }*/
+
+      bool enabled = !playlist.toggleShuffleFlag();
+
+      if (enabled) {
+        playlist.shuffle();
+        Serial.println("Shuffle ENABLED");
+        bool enabled = playlist.toggleShuffleFlag();
+      } else {
+        playlist.shuffle();
+        Serial.println("Shuffle DISABLED");
+      }
+
+    playlist.printOrder(Serial);
+    }
+
 
     if (!paused) {
       uint32_t n = copier.copy();
@@ -163,10 +173,6 @@ void playbackTask(void* param) {
       updateScreen();
     }
 
-    
-
-    
-
     //size_t n = copier.copy();
     /*if (n == 0) {
       if (!audioFile || !audioFile.available()) needAdvance = true;
@@ -183,19 +189,25 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
     case ButtonEvents::Event::HOLDING:
       break;
     case ButtonEvents::Event::RELEASED:
-      
       break;
     case ButtonEvents::Event::SEQUENCE:
       if (data.count == 1) {
-        paused = !paused;
+        if (data.heldMs < 500) {
+          uint16_t preset = cycleEQcfg(&eq, &cfg_eq);
+
+          Serial.println(preset);
+        } else {
+          paused = !paused;
+        }
       } else if (data.count == 2) {
         needAdvance = true;
         paused = false;
-      } else {
+      } else if (data.count == 3) {
         needPrevious = true;
         paused = false;
+      } else if (data.count == 4) {
+        needShuffle = true;
       }
-
       Serial.print(F("sequence of "));
       Serial.println(data.count);
       break;
@@ -312,8 +324,32 @@ void updateScreen() {
   display.setCursor(0, 0);
 
   display.println(paused ? "PAUSE" : "WMTU");
-  display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 1, &ttime);
-  display.drawScrollingText(current.artist, &acur,  32, T_WAIT, 4, &atime);
-  display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 2, &altime);
+
+  if (strlen(current.title) > 12) {
+    display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 1, &ttime);
+  }
+  else
+  {
+    display.setCursor(0, 16);
+    display.println(current.title);
+  }
+
+   if (strlen(current.artist) > 12) {
+    display.drawScrollingText(current.artist,  &acur,  32, T_WAIT, 4, &atime);
+  }
+  else
+  {
+    display.setCursor(0, 32);
+    display.println(current.artist);
+  }
+
+   if (strlen(current.album) > 12) {
+    display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 2, &altime);
+  }
+  else
+  {
+    display.setCursor(0, 48);
+    display.println(current.album);
+  }
   display.display();
 }
