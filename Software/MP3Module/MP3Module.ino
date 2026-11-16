@@ -53,7 +53,7 @@ MetaDataOutput outMeta;
 I2SStream i2s;
 Equalizer3Bands eq(i2s);
 ConfigEqualizer3Bands cfg_eq;
-EncodedAudioStream out2dec(&i2s, new MP3DecoderHelix());
+EncodedAudioStream out2dec(&eq, new MP3DecoderHelix());
 
 MultiOutput out;
 StreamCopy copier(out, audioFile);
@@ -189,11 +189,16 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
     case ButtonEvents::Event::HOLDING:
       break;
     case ButtonEvents::Event::RELEASED:
-      
       break;
     case ButtonEvents::Event::SEQUENCE:
       if (data.count == 1) {
-        paused = !paused;
+        if (data.heldMs < 500) {
+          uint16_t preset = cycleEQcfg(&eq, &cfg_eq);
+
+          Serial.println(preset);
+        } else {
+          paused = !paused;
+        }
       } else if (data.count == 2) {
         needAdvance = true;
         paused = false;
