@@ -1,20 +1,20 @@
 #include <Wire.h>
 #include <RDA5807.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <SSD1306AsciiWire.h>
+#include <SSD1306Ascii.h>
 #include <ButtonEvents.h>
 
 // TODO: Update any pin assignments to what
 // they actually are on the board!!!!!!
 // Rotary Encoder Pins
-#define DI_ENCODER_CLK  XX // These don't need internal pull-up
-#define DI_ENCODER_DT   XX
-#define DI_ENCODER_SW   XX
+#define DI_ENCODER_CLK  2 // These don't need internal pull-up
+#define DI_ENCODER_DT   3
+#define DI_ENCODER_SW   14
 static ButtonEvents encoder_sw(DI_ENCODER_SW);
 
 // I2C Pins (Display and RDA5807)
-#define I2C_SDA     XX // These MUST be internal pull-up
-#define I2C_SCL     XX
+#define I2C_SDA     18 // These MUST be internal pull-up
+#define I2C_SCL     19
 
 // Display Configuration
 #define SCR_W       128
@@ -22,20 +22,22 @@ static ButtonEvents encoder_sw(DI_ENCODER_SW);
 #define OLED_RESET  -1
 #define SCR_ADDR    0x3C
 #define SCR_TIME    33
-Adafruit_SSD1306 display(SCR_W, SCR_H, &Wire, OLED_RESET);
+SSD1306AsciiWire display;
 
 // RDA5807 Radio IC Configuration
 RDA5807 radio;
 
 #define NUM_PRESETS 3
+uint16_t presetIdx = 0;
 
 uint16_t currentFrequency = 9630;  // 96.3 MHz
 uint16_t presets[NUM_PRESETS] = {9190, 9630, 9770};
-bool needScreen = false;
-bool needIncrease = false;
-bool needDecrease = false;
-bool needPressed = false;
-bool presetMenuState = false;
+volatile bool needScreen = true;
+volatile bool needIncrease = false;
+volatile bool needDecrease = false;
+volatile bool needPressed = false;
+volatile bool presetMenuState = false;
+volatile bool needScreenRefresh = false;
 
 void updateScreen();
 void handleRotaryEncoder();
@@ -43,31 +45,33 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
                       ButtonEvents&);
 
 void displayFrequency() {
-  Serial.print("Current frequency: ");
-  Serial.print(currentFrequency / 100.0, 2);
-  Serial.println(" MHz");
+  //Serial.print(F("Current frequency: "));
+  //Serial.print(currentFrequency / 100.0, 2);
+  //Serial.println(" MHz");
 }
 
 void setup() {
   Serial.begin(9600);
 
   // Start the I2C Wire
-  Wire.begin(I2C_SDA, I2C_SCL);
-  Wire.setClock(400000);
-
+  Wire.begin();
+  Wire.setClock(400000L);
+  display.begin(&Adafruit128x64, 0x3C);
   // Try to start the screen
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    while (1);
-  }
+  //if (!display.begin(&Adafruit128x64, 0x3C)) {
+  //  Serial.println(F("SSD1306 allocation failed"));
+  //  while (1);
+  //}
+
+  display.setFont(Verdana12_bold);
 
   // Write "OSHE" to the top of the screen
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-  display.setTextSize(2);
+  display.clear();
+  //display.setTextColor(SSD1306_WHITE);
+  //display.setTextSize(2);
   display.setCursor(0, 0);
   display.println("OSHE");
-  display.display();
+  //display.display();
 
   // Setup and begin the Rotary Encoder
   pinMode(DI_ENCODER_CLK, INPUT);
@@ -77,29 +81,39 @@ void setup() {
 
   Serial.println("Starting radio...");
 
-  rx.setup();
+  radio.setup();
 
-  rx.setFrequency(currentFrequency);
-  rx.setVolume(15);
-  rx.setMute(false);
-  rx.setMono(true); // Why are we in mono??
-  rx.setSoftmute(false);
+  radio.setFrequency(currentFrequency);
+  radio.setVolume(15);
+  radio.setMute(false);
+  radio.setMono(false); // Why are we in mono??
+  radio.setSoftmute(false);
 
   delay(500);
 
-  Serial.println("Radio ready!");
+  //Serial.println("Radio ready!");
   displayFrequency();
 
-  Serial.println("D8: Tune Down");
-  Serial.println("D9: Tune Up");
-  Serial.println("D10: Preset 91.9 MHz");
+  //Serial.println(F("D8: Tune Down"));
+  //Serial.println(F("D9: Tune Up"));
+  //Serial.println(F("D10: Preset 91.9 MHz"));
 }
 
 void loop() {
+  handleRotaryEncoder();
+
+  if (needScreenRefresh) {
+    needScreenRefresh = false;
+    display.clear();
+    needScreen = true;
+  }
+
   if (needScreen) {
     needScreen = false;
     updateScreen();
   }
+
+  
 
   if (presetMenuState) {
     if (needIncrease) {
@@ -117,13 +131,15 @@ void loop() {
     }
 
     if (needPressed) {
-      if (presetIdx < NUM_PRESETS) {
+      needPressed = false;
+      if (presetIdx < NUM_PRESETS-1) {
         presetIdx++;
       } else {
         presetIdx = 0;
       }
 
       needScreen = true;
+      needScreenRefresh = true;
     }
   } else {
     if (needIncrease) {
@@ -141,36 +157,68 @@ void loop() {
     }
   }
 
-  handleRotaryEncoder();
+  
 }
 
 
 void updateScreen() {
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-  display.setTextWrap(false);
-  display.setTextSize(2);
+  static bool wmtu_prev_flag = false;
   display.setCursor(0, 0);
 
-  display.println("OSHE");
-  if (presetMenuState) {
-    display.println("Preset 1");
-    display.printf("%d.%d FM\n", presets[0]/100, presets[0]%100);
+  if (currentFrequency == 9190) {
+    wmtu_prev_flag = true;
+    display.print(F("WMTU"));
   } else {
-    display.printf("%d.%d FM\n", currentFrequency/100, currentFrequency%100);
+
+    // HACKHACKHACK clear the buffer if we were just at WMTU because
+    // in the font, WMTU and OSHE are not the same width
+    if (wmtu_prev_flag == true) {
+      display.clear();
+      wmtu_prev_flag = false;
+    }
+
+    display.print(F("OSHE"));
   }
 
-  display.display();
+  if (presetMenuState) {
+    display.println(F("      PRESETS"));
+    display.println(F("P-1        P-2        P-3"));
+    display.print(presets[0]/100);
+    display.print(F("."));
+    display.print(presets[0]%100);
+    display.print(F("   "));
+    display.print(presets[1]/100);
+    display.print(F("."));
+    display.print(presets[1]%100);
+    display.print(F("   "));
+    display.print(presets[2]/100);
+    display.print(F("."));
+    display.println(presets[2]%100);
+    display.print(F("   "));
+    display.setCursor(42*presetIdx + 15, 58);
+    display.print(F("^"));
+    //display.printf("%d.%d FM\n", presets[0]/100, presets[0]%100);
+  } else {
+    display.print("\n");
+    display.print(currentFrequency/100);
+    display.print(F("."));
+    display.print(currentFrequency%100);
+    display.println(F(" FM"));
+    //display.printf("%d.%d FM\n", currentFrequency/100, currentFrequency%100);
+  }
+
+  //display.display();
 }
 
 void handleRotaryEncoder() {
   encoder_sw.update();
-
-  static uint8_t p_cstate = HIGH;
+  static volatile uint8_t p_cstate = HIGH;
+  
   //-1 for CCW, 0 for no turn, 1 for CW
   int8_t dir = 0;
   uint8_t c_cstate = digitalRead(DI_ENCODER_CLK);
 
+  
   if (p_cstate != c_cstate && c_cstate == HIGH) {
     if (digitalRead(DI_ENCODER_DT) == LOW) {
       dir = -1;
@@ -183,7 +231,9 @@ void handleRotaryEncoder() {
 
   // Trigger turn event
   if (dir != 0) {
-    Serial.printf("Direction: %d\n", dir, p_cstate, c_cstate);
+    //Serial.print(F("Direction: "));
+    //Serial.println(dir);
+    //Serial.print("Direction: %d\n", dir, p_cstate, c_cstate);
   }
 
   if (dir == 1) {
@@ -193,8 +243,6 @@ void handleRotaryEncoder() {
   }
 
   p_cstate = c_cstate;
-
-  delay(10);
 }
 
 static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData& data,
@@ -206,24 +254,20 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
       break;
     case ButtonEvents::Event::RELEASED:
       if (data.heldMs > 750) {
+        if (presetMenuState == true) {
+          currentFrequency = presets[presetIdx];
+        }
+
         presetMenuState = !presetMenuState;
+        needScreenRefresh = true;
       } else {
         needPressed = true;
       }
       break;
     case ButtonEvents::Event::SEQUENCE:
-      if (data.count == 1) {
-        paused = !paused;
-      } else if (data.count == 2) {
-        needAdvance = true;
-        paused = false;
-      } else {
-        needPrevious = true;
-        paused = false;
+      if (data.count == 2) {
+        currentFrequency = 9190;
       }
-
-      Serial.print(F("sequence of "));
-      Serial.println(data.count);
       break;
   }
 }
