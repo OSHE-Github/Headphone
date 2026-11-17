@@ -62,10 +62,6 @@ ShufflePlaylist playlist;
 
 void updateScreen();
 
-// Rotary Encoder callbacks
-// void knobCallback(long value);
-// void buttonCallback(unsigned long duration);
-
 struct TrackInfo {
   char title[256];
   char artist[256];
@@ -75,13 +71,15 @@ struct TrackInfo {
 
 TrackInfo current;
 
-// ---------- Playback state (shared with button task) ----------
-volatile bool needAdvance  = false;
-volatile bool needPrevious = false;
-volatile bool needScreen   = false;
-volatile bool needShuffle  = false;
-volatile bool needRedraw   = false;
-volatile bool paused       = false;
+// ---------- Playback state ----------
+volatile bool needAdvance   = false;
+volatile bool needPrevious  = false;
+volatile bool needScreen    = false;
+volatile bool needShuffle   = false;
+volatile bool needRedraw    = false;
+volatile bool paused        = false;
+volatile bool locked        = false;
+volatile uint32_t last_input_time = millis();
 
 uint8_t silence[512] = {0};
 
@@ -125,44 +123,53 @@ void loadTrack(const char* path) {
 // ---------- Playback task ----------
 void playbackTask(void* param) {
   for (;;) {
-    if (needShuffle) {
-      needShuffle = false;
+    uint32_t pnow = millis();
+    static bool dim_flag = false;
 
-      bool enabled = !playlist.toggleShuffleFlag();
+    if (dim_flag && pnow - last_input_time < 30000) {
+      display.dim(false);
+      dim_flag = false;
+    }
 
-      if (enabled) {
-        playlist.shuffle();
-        Serial.println("Shuffle ENABLED");
-        bool enabled = playlist.toggleShuffleFlag();
-      } else {
-        playlist.shuffle();
-        Serial.println("Shuffle DISABLED");
+    if (pnow - last_input_time >= 30000) {
+      display.dim(true);
+      dim_flag = true;
+    }
+
+    if (!locked) {
+      if (needShuffle || needAdvance || needPrevious) {
+        //last_input_time = pnow;
       }
 
-    playlist.printOrder(Serial);
-    }
+      if (needShuffle) {
+        needShuffle = false;
 
+        bool enabled = !playlist.toggleShuffleFlag();
 
-    if (!paused) {
-      uint32_t n = copier.copy();
-      if (n == 0) {
-        if (!audioFile || !audioFile.available()) needAdvance = true;
-        vTaskDelay(1);
+        if (enabled) {
+          playlist.shuffle();
+          Serial.println("Shuffle ENABLED");
+          bool enabled = playlist.toggleShuffleFlag();
+        } else {
+          playlist.shuffle();
+          Serial.println("Shuffle DISABLED");
+        }
+
+      playlist.printOrder(Serial);
       }
-    } else {
-      i2s.write(silence, sizeof(silence));   // blocks until I2S has room
-    }
+      
 
-    if (needAdvance) {
-      needAdvance = false;
-      loadTrack(playlist.next());
-      paused = false;
-    }
+      if (needAdvance) {
+        needAdvance = false;
+        loadTrack(playlist.next());
+        paused = false;
+      }
 
-    if (needPrevious) {
-      needPrevious = false;
-      loadTrack(playlist.prev());
-      paused = false;
+      if (needPrevious) {
+        needPrevious = false;
+        loadTrack(playlist.prev());
+        paused = false;
+      }
     }
 
     uint32_t now = millis();
@@ -173,11 +180,15 @@ void playbackTask(void* param) {
       updateScreen();
     }
 
-    //size_t n = copier.copy();
-    /*if (n == 0) {
-      if (!audioFile || !audioFile.available()) needAdvance = true;
-      vTaskDelay(1);
-    }*/
+    if (!paused) {
+      uint32_t n = copier.copy();
+      if (n == 0) {
+        if (!audioFile || !audioFile.available()) needAdvance = true;
+        vTaskDelay(1);
+      }
+    } else {
+      i2s.write(silence, sizeof(silence));   // blocks until I2S has room
+    }
   }
 }
 
@@ -189,27 +200,31 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
     case ButtonEvents::Event::HOLDING:
       break;
     case ButtonEvents::Event::RELEASED:
+      if (data.heldMs >= 500) {
+        uint16_t preset = cycleEQcfg(&eq, &cfg_eq);
+
+        Serial.println(preset);
+      }
       break;
     case ButtonEvents::Event::SEQUENCE:
-      if (data.count == 1) {
-        if (data.heldMs < 500) {
-          uint16_t preset = cycleEQcfg(&eq, &cfg_eq);
-
-          Serial.println(preset);
-        } else {
+      if (!locked) {
+        if (data.count == 1) {
           paused = !paused;
+        } else if (data.count == 2) {
+          needAdvance = true;
+          paused = false;
+        } else if (data.count == 3) {
+          needPrevious = true;
+          paused = false;
+        } else if (data.count == 4) {
+          needShuffle = true;
         }
-      } else if (data.count == 2) {
-        needAdvance = true;
-        paused = false;
-      } else if (data.count == 3) {
-        needPrevious = true;
-        paused = false;
-      } else if (data.count == 4) {
-        needShuffle = true;
+
+        last_input_time = millis();
+
+        Serial.print(F("sequence of "));
+        Serial.println(data.count);
       }
-      Serial.print(F("sequence of "));
-      Serial.println(data.count);
       break;
   }
 }
@@ -286,6 +301,7 @@ void loop() {
   static uint8_t p_cstate = HIGH;
 
   //-1 for CCW, 0 for no turn, 1 for CW
+  static int16_t same_dir_count = 0;
   int8_t dir = 0;
   uint8_t c_cstate = digitalRead(DI_ENCODER_CLK);
 
@@ -301,13 +317,21 @@ void loop() {
 
   // Trigger turn event
   if (dir != 0) {
-    Serial.printf("Direction: %d\n", dir, p_cstate, c_cstate);
+    last_input_time = millis();
   }
 
-  if (dir == 1) {
-    needAdvance = true;
-  } else if (dir == -1) {
-    needPrevious = true;
+  if ((same_dir_count < 0 && dir == 1) || (same_dir_count > 0 && dir == -1)) {
+    same_dir_count = 0;
+  } else {
+    same_dir_count += dir;
+  }
+
+  if (same_dir_count >= 5) {
+    locked = true;
+    same_dir_count = 0;
+  } else if (same_dir_count <= -5) {
+    locked = false;
+    same_dir_count = 0;
   }
 
   p_cstate = c_cstate;
@@ -323,10 +347,15 @@ void updateScreen() {
   display.setTextSize(2);
   display.setCursor(0, 0);
 
-  display.println(paused ? "PAUSE" : "WMTU");
+  display.print(paused ? "PAUSE" : "OSHE");
+  if (locked) {
+    display.println(" LOCK");
+  } else {
+    display.print("\n");
+  }
 
   if (strlen(current.title) > 12) {
-    display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 1, &ttime);
+    display.drawScrollingText(current.title,  &tcur,  16, T_WAIT, 4, &ttime);
   }
   else
   {
@@ -344,7 +373,7 @@ void updateScreen() {
   }
 
    if (strlen(current.album) > 12) {
-    display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 2, &altime);
+    display.drawScrollingText(current.album,  &alcur, 48, T_WAIT, 4, &altime);
   }
   else
   {
