@@ -25,6 +25,7 @@ static ButtonEvents encoder_sw(DI_ENCODER_SW);
 SSD1306AsciiWire display;
 
 // RDA5807 Radio IC Configuration
+#define FIX_BAND RADIO_BAND_FM
 RDA5807 radio;
 
 #define NUM_PRESETS 3
@@ -38,6 +39,8 @@ volatile bool needDecrease = false;
 volatile bool needPressed = false;
 volatile bool presetMenuState = false;
 volatile bool needScreenRefresh = false;
+volatile uint32_t last_input_time = millis();
+volatile bool lock_flag = false;
 
 void updateScreen();
 void handleRotaryEncoder();
@@ -79,14 +82,14 @@ void setup() {
   encoder_sw.onEvent(onEncoderSW);
   encoder_sw.begin();
 
-  Serial.println("Starting radio...");
+  //Serial.println("Starting radio...");
 
   radio.setup();
 
   radio.setFrequency(currentFrequency);
-  radio.setVolume(15);
+  radio.setVolume(7);
   radio.setMute(false);
-  radio.setMono(false); // Why are we in mono??
+  radio.setMono(false);
   radio.setSoftmute(false);
 
   delay(500);
@@ -100,7 +103,20 @@ void setup() {
 }
 
 void loop() {
+  uint32_t now = millis();
+  static bool dim_flag = false;
+  static uint16_t lastFrequency = currentFrequency;
   handleRotaryEncoder();
+
+  if (now - last_input_time > 10000 && dim_flag == false) {
+    display.setContrast(40);
+    needScreenRefresh = true;
+    dim_flag = true;
+  } else if (now - last_input_time <= 10000 && dim_flag == true) {
+    display.setContrast(127);
+    needScreenRefresh = true;
+    dim_flag = false;
+  }
 
   if (needScreenRefresh) {
     needScreenRefresh = false;
@@ -112,8 +128,6 @@ void loop() {
     needScreen = false;
     updateScreen();
   }
-
-  
 
   if (presetMenuState) {
     if (needIncrease) {
@@ -130,7 +144,7 @@ void loop() {
       needScreen = true;
     }
 
-    if (needPressed) {
+    if (needPressed && !lock_flag) {
       needPressed = false;
       if (presetIdx < NUM_PRESETS-1) {
         presetIdx++;
@@ -142,22 +156,34 @@ void loop() {
       needScreenRefresh = true;
     }
   } else {
-    if (needIncrease) {
-      needIncrease = false;
-      currentFrequency += 10;
-    
-      needScreen = true;
+    if (needPressed) {
+      needPressed = false;
+      lock_flag = !lock_flag;
+      needScreenRefresh = true;
     }
 
-    if (needDecrease) {
-      needDecrease = false;
-      currentFrequency -= 10;
+    if (!lock_flag) {
+      if (needIncrease) {
+        needIncrease = false;
+        currentFrequency += 10;
+      
+        needScreen = true;
+      }
 
-      needScreen = true;
+      if (needDecrease) {
+        needDecrease = false;
+        currentFrequency -= 10;
+
+        needScreen = true;
+      }
     }
   }
 
+  if (currentFrequency != lastFrequency) {
+    radio.setFrequency(currentFrequency);
+  }
   
+  lastFrequency = currentFrequency;
 }
 
 
@@ -199,6 +225,9 @@ void updateScreen() {
     display.print(F("^"));
     //display.printf("%d.%d FM\n", presets[0]/100, presets[0]%100);
   } else {
+    if (lock_flag) {
+      display.print(" LOCK");
+    }
     display.print("\n");
     display.print(currentFrequency/100);
     display.print(F("."));
@@ -231,9 +260,7 @@ void handleRotaryEncoder() {
 
   // Trigger turn event
   if (dir != 0) {
-    //Serial.print(F("Direction: "));
-    //Serial.println(dir);
-    //Serial.print("Direction: %d\n", dir, p_cstate, c_cstate);
+    last_input_time = millis();
   }
 
   if (dir == 1) {
@@ -253,7 +280,7 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
     case ButtonEvents::Event::HOLDING:
       break;
     case ButtonEvents::Event::RELEASED:
-      if (data.heldMs > 750) {
+      if (!lock_flag && data.heldMs > 750) {
         if (presetMenuState == true) {
           currentFrequency = presets[presetIdx];
         }
@@ -263,10 +290,16 @@ static void onEncoderSW(ButtonEvents::Event event, const ButtonEvents::EventData
       } else {
         needPressed = true;
       }
+
+      last_input_time = millis();
       break;
     case ButtonEvents::Event::SEQUENCE:
-      if (data.count == 2) {
-        currentFrequency = 9190;
+      if (!lock_flag) {
+        if (data.count == 2) {
+          currentFrequency = 9190;
+        }
+
+        last_input_time = millis();
       }
       break;
   }
