@@ -11,6 +11,10 @@ This project aims to design a pair of modular headphones. It accomplishes this b
 ## CAD
 
 ### Headbands
+#### Materials/Parameters
+First try, solid headband to learn elasticities of various infills, thicknesses, wall loops, and materials. Settled around 15% infill, 3-5mm thickness, and 2 wall loops for PLA. Due to some issues with creep (plastic deformation) over time the transition to PTEG-CF was made. With this material the tentative parameters are 100% infill, 4mm thickness, and 2 wall loops (somewhat irrelevant at 100% infill).
+
+#### Design Variations
 
 ### Ear Cups
 
