@@ -10,6 +10,16 @@ This project aims to design a pair of modular headphones. It accomplishes this b
 
 ## CAD
 
+### Headbands
+
+### Ear Cups
+
+### Modules
+
+### Driver Housings/Acoustics
+
+### Misc
+
 ## Other Features
 
 ## Considerations
